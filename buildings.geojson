@@ -1,0 +1,474 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+     
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.077718788921686, -22.566620130607063] },
+      "properties": {
+        "name": "Main Gate  ",
+        "code": "", 
+        "category": "gate",
+        "department": "Main Gate",
+        "contents": "main entrance",
+        "accessible": true,
+        "verified": false
+      }
+      
+    },
+        {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.077604, -22.565443] },
+      "properties": {
+        "name": "Bank Windoek ATM  ",
+        "code": "", 
+        "category": "atm",
+        "department": "ATM",
+        "contents": "ATM",
+        "accessible": true,
+        "verified": false
+      }
+      
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.077594, -22.5654245] },
+      "properties": {
+        "name": "FNB ATM  ",
+        "code": "", 
+        "category": "atm",
+        "department": "ATM",
+        "contents": "ATM",
+        "accessible": true,
+        "verified": false
+      }
+    },
+        {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.077616, -22.56547] },
+      "properties": {
+        "name": "Standrd Bank ATM  ",
+        "code": "", 
+        "category": "atm",
+        "department": "ATM",
+        "contents": "ATM",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.0739927539777775, -22.565198985268136] },
+      "properties": {
+        "name": "Engineering gate  ",
+        "code": "", 
+        "category": "gate",
+        "department": "Gate",
+        "contents": "entrance",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07691, -22.56476] },
+      "properties": {
+        "name": "Small Gate  ",
+        "code": "", 
+        "category": "gate",
+        "department": "Small Gate",
+        "contents": "entrance",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07541790291896,-22.564898103474082] },
+      "properties": {
+        "name": "Lower Campus Gate  ",
+        "code": "", 
+        "category": "gate",
+        "department": "Lower Campus Gate",
+        "contents": "main entrance",
+        "accessible": true,
+        "verified": false
+      }
+    },
+        
+    
+     {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.075293410754753, -22.56452681297983] },
+      "properties": {
+        "name": "Main Library   ",
+        "code": "LIB",
+        "category": "library",
+        "department": "Library Services",
+        "contents": "Study floors, computer lab, borrowing desk",
+        "accessible": true,
+        "verified": false
+      }
+    },
+     
+    
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.0750583786974,-22.56494564164482] },
+      "properties": {
+        "name": "Auditorium  ",
+        "code": "", 
+        "category": "Auditorium",
+        "department": "Auditorium",
+        "contents": "Auditorium",
+        "accessible": true,
+        "verified": false
+      }
+    },
+
+    
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.073263, -22.565914] },
+      "properties": {
+        "name": "Mechanical, Civil Engineering and Architecture Building  ",
+        "code": "", 
+        "category": "lecture",
+        "department": "",
+        "contents": "Lecture halls",
+        "accessible": true,
+        "verified": false
+      }
+    },
+        {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07484849585021, -22.56490105792561] }, 
+      "properties": {
+        "name": "Engineering Building   ",
+        "code": "", 
+        "category": "lecture",
+        "department": "",
+        "contents": "Lecture halls ",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07436, -22.565406] },
+      "properties": {
+        "name": "Engineering Basement  ",
+        "code": "", 
+        "category": "lecture",
+        "department": "",
+        "contents": "Lecture halls ",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07371369745676, -22.56613861287764] },
+      "properties": {
+        "name": "School of Health and Applied Sciences Building  ",
+        "code": "", 
+        "category": "lecture",
+        "department": "",
+        "contents": "Lecture halls",
+        "accessible": true,
+        "verified": false
+      }
+    },
+      {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07446311406325, -22.56560583889539] },
+      "properties": {
+        "name": "Science and Technology Building  ",
+        "code": "", 
+        "category": "lecture",
+        "department": "",
+        "contents": "Lecture halls ",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.072471801561356, -22.566486770436633] },
+      "properties": {
+        "name": " Hotel School (NUST)  ",
+        "code": "A",
+        "category": "Hotel",
+        "department": "Shared lecture venues",
+        "contents": "Lecture halls A101-A110",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07761, -22.56706] },
+      "properties": {
+        "name": "School of Computing and Informatics(IT House)  ",
+        "code": "IT house",
+        "category": "lecturersOffices",
+        "department": "Shared lecture venues",
+        "contents": "Lecturers Offices",
+        "accessible": true,
+        "verified": false
+      }
+    },
+     {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07789546727576, -22.56622572254122] },
+      "properties": {
+        "name": "Poly Heights  ",
+        "code": "Poly Heights",
+        "category": "lecturersOffices",
+        "department": "Shared lecture venues",
+        "contents": "Lecturers Offices",
+        "accessible": true,
+        "verified": false
+      }
+    },
+        {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.077557198318534, -22.565234229588956] },
+      "properties": {
+        "name": "Lecture Building  ",
+        "code": "Lecture Building",
+        "category": "lecture",
+        "department": "Shared lecture venues",
+        "contents": "Lecture halls A101-A110",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.077127374329113, -22.565337638778228] },
+      "properties": {
+        "name": "Office Building ",
+        "code": "Office Building",
+        "category": "lecture",
+        "department": "Shared lecture venues",
+        "contents": "Lecture halls A101-A110",
+        "accessible": true,
+        "verified": false
+      }
+    },
+
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07760, -22.56627] },
+      "properties": {
+        "name": "Administration ",
+        "code": "ADM",
+        "category": "admin",
+        "department": "Registry and Student Services",
+        "contents": "Registration, fees, student enquiries",
+        "accessible": true,
+        "verified": false
+      }
+    },
+        {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.075508, -22.56674] },
+      "properties": {
+        "name": "K1. Cooperative Education Unit   ",
+        "code": "K7",
+        "category": "lecture",
+        "department": "Campus services",
+        "contents": "Meals, snacks, seating area",
+        "accessible": true,
+        "verified": false
+      }
+    },    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.075851, -22.563953] },
+      "properties": {
+        "name": "Kasi Burger ",
+        "code": "Kasi Burger",
+        "category": "food",
+        "department": "Campus services",
+        "contents": "Meals, snacks, seating area",
+        "accessible": true,
+        "verified": false
+      }
+    },
+   {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.075105, -22.563978] },
+      "properties": {
+        "name": "Villa Verdi ",
+        "code": "Ladies  Hostel",
+        "category": "hostel",
+        "department": "Campus services",
+        "contents": "Accomodation",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.076511, -22.56599] },
+      "properties": {
+        "name": "Hopker ladies Hostel ",
+        "code": "Ladies  Hostel",
+        "category": "hostel",
+        "department": "Campus services",
+        "contents": "Accomodation",
+        "accessible": true,
+        "verified": false
+      }
+    },
+ 
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.076405, -22.565523] },
+      "properties": {
+        "name": "Shangri-La Men's Hostel   ",
+        "code": "Men's Hostel",
+        "category": "hostel",
+        "department": "Campus services",
+        "contents": "Accomodation",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.076682, -22.566171] },
+      "properties": {
+        "name": "Cafeteria   ",
+        "code": "CAF",
+        "category": "food",
+        "department": "Campus services",
+        "contents": "Meals, snacks, seating area",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [ 17.073808, -22.565536] },
+      "properties": {
+        "name": "Engineering Basement Parking   ",
+        "code": "P7",
+        "category": "parking",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.073253, -22.566545] },
+      "properties": {
+        "name": "HTTPS Parking   ",
+        "code": "P4",
+        "category": "parking",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+    },
+        {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.073132, -22.566228] },
+      "properties": {
+        "name": "High-Tech Transfer Plaza Select (HTTPS)   ",
+        "code": "HTTPS Building",
+        "category": "lecture",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07552, -22.56482] },
+      "properties": {
+        "name": "Visitor Parking   ",
+        "code": "P3",
+        "category": "parking",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07830, -22.56532] },
+      "properties": {
+        "name": "Visitor Parking   ",
+        "code": "P2",
+        "category": "parking",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07791, -22.56590] },
+      "properties": {
+        "name": "Visitor Parking   ",
+        "code": "P1",
+        "category": "parking",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+      
+    },
+     {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [ 17.071707, -22.566879] },
+      "properties": {
+        "name": "Hotel Parking   ",
+        "code": "P8",
+        "category": "parking",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+    }, 
+        {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.07257959724373, -22.56661962186201] },
+      "properties": {
+        "name": "Hotel Parking   ",
+        "code": "P5",
+        "category": "parking",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+    }, 
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [17.072459335642073, -22.56626527551934] }, 
+      "properties": {
+        "name": "Hotel Parking   ",
+        "code": "P6",
+        "category": "parking",
+        "department": "Campus services",
+        "contents": "Visitor and staff parking",
+        "accessible": true,
+        "verified": false
+      }
+    } 
+
+  ]
+}
+

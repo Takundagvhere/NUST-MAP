@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Map (unofficial)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-hover: #f1f3f4;
+    --ink: #202124;
+    --muted: #5f6368;
+    --line: #dadce0;
+    --accent: #1a73e8;
+    --shadow: 0 1px 2px rgba(60,64,67,.3), 0 2px 6px 2px rgba(60,64,67,.15);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #2b2d30; --surface: #2b2d30; --surface-hover: #3a3d41; --ink: #e8eaed;
+      --muted: #9aa0a6; --line: #4a4d52; --accent: #8ab4f8;
+      --shadow: 0 1px 3px rgba(0,0,0,.6), 0 2px 8px 2px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--surface); color: var(--ink);
+  }
+
+  /* The map fills the whole screen; everything else floats on top of it. */
+  #map, #map3d { position: fixed; inset: 0; }
+  #map.hidden { visibility: hidden; }
+  #map3d { display: none; }
+  .maplibregl-ctrl-bottom-right { margin-bottom: 20px; }
+  .maplibregl-popup-content { border-radius: 12px; box-shadow: var(--shadow); background: var(--surface); color: var(--ink); padding: 12px 16px; }
+  .maplibregl-popup-anchor-top .maplibregl-popup-tip, .maplibregl-popup-anchor-top-left .maplibregl-popup-tip, .maplibregl-popup-anchor-top-right .maplibregl-popup-tip { border-bottom-color: var(--surface); }
+  .maplibregl-popup-anchor-bottom .maplibregl-popup-tip, .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip, .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip { border-top-color: var(--surface); }
+
+  /* ---------- Top-left: search card + chips ---------- */
+  #topbar {
+    position: fixed; top: 12px; left: 12px; z-index: 1100;
+    width: min(460px, calc(100vw - 24px));
+    display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+  }
+  #topbar > * { pointer-events: auto; }
+
+  .row { display: flex; align-items: center; gap: 8px; }
+  .searchbox {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 4px;
+    height: 48px; padding: 0 6px 0 14px;
+    background: var(--surface); border-radius: 24px; box-shadow: var(--shadow);
+  }
+  .searchbox svg { flex: none; width: 22px; height: 22px; fill: var(--muted); }
+  #search {
+    flex: 1; min-width: 0; height: 100%;
+    border: 0; outline: 0; background: transparent; color: var(--ink);
+    font-size: 1rem; padding: 0 8px;
+    -webkit-appearance: none; appearance: none;
+  }
+  #search::placeholder { color: var(--muted); }
+  #search::-webkit-search-cancel-button { display: none; }
+  .searchbox:focus-within { box-shadow: var(--shadow), 0 0 0 2px var(--accent); }
+  #clear {
+    display: none; flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%;
+    background: transparent; cursor: pointer; align-items: center; justify-content: center;
+  }
+  #clear:hover { background: var(--surface-hover); }
+  #clear.on { display: inline-flex; }
+  #clear svg { width: 20px; height: 20px; }
+
+  .fab {
+    flex: none; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+    background: var(--surface); box-shadow: var(--shadow);
+  }
+  .fab svg { width: 22px; height: 22px; fill: var(--muted); }
+  .fab:hover { background: var(--surface-hover); }
+  .fab[aria-expanded="true"] { box-shadow: var(--shadow), 0 0 0 2px var(--accent); }
+  .fab[aria-expanded="true"] svg { fill: var(--accent); }
+  #dir-btn { background: var(--accent); }
+  #dir-btn svg { fill: #fff; }
+  #dir-btn:hover { filter: brightness(1.1); background: var(--accent); }
+  #dir-btn[aria-expanded="true"] svg { fill: #fff; }
+
+  .panel { display: none; padding: 12px; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); }
+  .panel.open { display: block; }
+  .panel h2 { margin: 0 0 10px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .panel-head h2 { margin: 0; }
+  .panel-actions { display: flex; gap: 4px; }
+  .panel-actions button {
+    height: 28px; padding: 0 10px; border: 0; border-radius: 14px; background: transparent;
+    color: var(--accent); font-size: .85rem; font-weight: 600; cursor: pointer;
+  }
+  .panel-actions button:hover { background: var(--surface-hover); }
+  #chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px; font-size: .875rem; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 16px; background: transparent; color: var(--ink);
+  }
+  .chip:hover { background: var(--surface-hover); }
+  .chip[aria-pressed="false"] { color: var(--muted); }
+  .chip[aria-pressed="false"] .dot { opacity: .35; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+  /* Directions panel: whatever routing.js builds for From / To is moved in here. */
+  #dir-mount > * { position: static !important; float: none !important; width: auto !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); }
+  #dir-mount select { max-width: 100%; }
+  #dir-mount input { max-width: 100%; }
+  #dir-mount { max-height: 60vh; overflow: auto; }
+  #dir-empty { margin: 0; font-size: .85rem; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Result count pill, sits under the chips */
+  #status {
+    align-self: flex-start; padding: 5px 12px; font-size: .8rem; color: var(--muted);
+    background: var(--surface); border-radius: 14px; box-shadow: var(--shadow);
+  }
+  #status:empty { display: none; }
+
+  /* ---------- Bottom-left: layers button + panel ---------- */
+  #layers {
+    position: fixed; left: 12px; bottom: 28px; z-index: 1100;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  }
+  #layers-btn {
+    width: 64px; height: 64px; padding: 0; cursor: pointer; overflow: hidden;
+    border: 2px solid var(--surface); border-radius: 10px; box-shadow: var(--shadow);
+    background: var(--surface); position: relative;
+  }
+  #layers-btn .thumb { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  #layers-btn .label {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 0 4px;
+    font-size: .72rem; font-weight: 600; color: #fff; text-align: center;
+    background: linear-gradient(transparent, rgba(0,0,0,.7));
+  }
+  #layers-panel {
+    display: none; padding: 12px; background: var(--surface);
+    border-radius: 12px; box-shadow: var(--shadow);
+  }
+  #layers-panel.open { display: block; }
+  #layers-panel h2 { margin: 0 0 10px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+  .opts { display: flex; gap: 12px; }
+  .opt {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    width: 76px; padding: 0; border: 0; background: transparent; cursor: pointer;
+    font-size: .8rem; color: var(--ink);
+  }
+  .opt .thumb {
+    width: 64px; height: 64px; border-radius: 10px; background-size: cover; background-position: center;
+    border: 2px solid transparent;
+  }
+  .opt[aria-checked="true"] .thumb { border-color: var(--accent); }
+  .opt[aria-checked="true"] span { color: var(--accent); font-weight: 600; }
+
+  /* Thumbnails are drawn with CSS so no image files are needed. */
+  #layers-details { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+  #layers-details h2 { margin-bottom: 8px; }
+  #details-mount label { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--ink); cursor: pointer; }
+  #details-mount label + label { margin-top: 8px; }
+  #details-mount #ol-note { margin: 2px 0 0 24px; font-size: .75rem; color: var(--muted) !important; }
+  #details-mount input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+  .thumb-2d {
+    background-color: #e9efe6;
+    background-image:
+      linear-gradient(90deg, transparent 46%, #fff 46% 54%, transparent 54%),
+      linear-gradient(0deg, transparent 30%, #fbe9a6 30% 38%, transparent 38%),
+      linear-gradient(0deg, transparent 70%, #fff 70% 76%, transparent 76%),
+      radial-gradient(circle at 20% 80%, #b9dcb0 0 20px, transparent 21px),
+      radial-gradient(circle at 85% 20%, #aad3f0 0 18px, transparent 19px);
+  }
+
+  .thumb-3d {
+    background-color: #dfe5dc;
+    background-image:
+      linear-gradient(#aab3b8,#aab3b8), linear-gradient(#8e979c,#8e979c), linear-gradient(#c4cbcf,#c4cbcf);
+    background-repeat: no-repeat;
+    background-size: 22px 26px, 12px 38px, 18px 18px;
+    background-position: 10px 30px, 36px 14px, 44px 38px;
+  }
+
+  /* ---------- Floating, glowing start / destination icons ---------- */
+  .gm { position: relative; width: 40px; height: 80px; pointer-events: none; --c: #1a73e8; }
+  .gm-end { --c: #ea4335; }
+  .gm-body { position: absolute; left: 50%; top: 6px; width: 28px; height: 28px; margin-left: -14px; animation: gm-bob 2.2s ease-in-out infinite; }
+  .gm-core { position: absolute; inset: 0; background: var(--c); border: 3px solid #fff; animation: gm-glow 2.2s ease-in-out infinite; }
+  .gm-start .gm-core { border-radius: 50%; }
+  .gm-start .gm-core::before { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 2px solid var(--c); opacity: 0; animation: gm-ring 2.2s ease-out infinite; }
+  .gm-start .gm-core::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff; }
+  .gm-end .gm-core { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
+  .gm-end .gm-core::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff; }
+  .gm-stem { position: absolute; left: 50%; top: 40px; width: 2px; height: 40px; margin-left: -1px; background: linear-gradient(var(--c), transparent); opacity: .8; }
+  .gm-ground { position: absolute; left: 50%; bottom: -4px; width: 24px; height: 9px; margin-left: -12px; border-radius: 50%;
+    background: radial-gradient(ellipse at center, var(--c), transparent 70%); animation: gm-pulse 2.2s ease-in-out infinite; }
+  @keyframes gm-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes gm-glow {
+    0%, 100% { box-shadow: 0 0 8px 2px color-mix(in srgb, var(--c) 55%, transparent), 0 0 16px 4px color-mix(in srgb, var(--c) 30%, transparent); }
+    50%      { box-shadow: 0 0 14px 5px color-mix(in srgb, var(--c) 85%, transparent), 0 0 28px 10px color-mix(in srgb, var(--c) 45%, transparent); }
+  }
+  @keyframes gm-ring { 0% { transform: scale(.6); opacity: .8; } 100% { transform: scale(1.6); opacity: 0; } }
+  @keyframes gm-pulse { 0%, 100% { opacity: .5; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.15); } }
+  @media (prefers-reduced-motion: reduce) { .gm-body, .gm-core, .gm-core::before, .gm-ground { animation: none; } }
+
+
+  /* ---------- Searchable From / To pickers ---------- */
+  .cb { position: relative; }
+  .cb-input {
+    width: 100%; padding: 8px 10px; font-size: .95rem; font-family: inherit;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);
+  }
+  .cb-input::placeholder { color: var(--muted); }
+  .cb-list {
+    position: fixed; z-index: 1300; margin: 0; padding: 4px; list-style: none; overflow-y: auto;
+    background: var(--surface); border-radius: 10px; box-shadow: var(--shadow);
+  }
+  .cb-list[hidden] { display: none; }
+  .cb-list li { padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--ink); font-size: .92rem; }
+  .cb-list li .sub { display: block; font-size: .75rem; color: var(--muted); margin-top: 1px; }
+  .cb-list li.hi { background: var(--surface-hover); }
+  .cb-list li[aria-selected="true"] { font-weight: 600; }
+  .cb-list li mark { background: transparent; color: var(--accent); font-weight: 700; }
+  .cb-list li.cb-empty { color: var(--muted); cursor: default; }
+
+  /* ---------- Bottom-right: Leaflet zoom + attribution ---------- */
+  .leaflet-bottom.leaflet-right { margin-bottom: 20px; }
+  .leaflet-control-zoom { border: 0 !important; border-radius: 10px; box-shadow: var(--shadow) !important; overflow: hidden; }
+  .leaflet-control-zoom a { background: var(--surface) !important; color: var(--ink) !important; border-bottom-color: var(--line) !important; }
+  .leaflet-control-zoom a:hover { background: var(--surface-hover) !important; }
+  .leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 85%, transparent) !important; color: var(--muted) !important; }
+  .leaflet-control-attribution a { color: var(--muted) !important; }
+  #note {
+    position: fixed; left: 88px; bottom: 6px; z-index: 1000;
+    font-size: .72rem; color: var(--muted);
+    background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 1px 6px; border-radius: 4px;
+  }
+
+  /* Popups */
+  .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: var(--shadow); background: var(--surface); color: var(--ink); }
+  .leaflet-popup-tip { background: var(--surface); }
+  .popup h2 { margin: 0 0 2px; font-size: 1rem; }
+  .popup p { margin: 2px 0; }
+  .popup .meta { color: var(--muted); font-size: .85rem; }
+
+  @media (max-width: 480px) {
+    #note { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="map3d"></div>
+
+<div id="topbar">
+  <div class="row">
+  <div class="searchbox">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input id="search" type="search" placeholder="Search campus" aria-label="Search buildings, codes or departments" autocomplete="off">
+    <button id="clear" type="button" aria-label="Clear search">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" style="color:var(--muted)"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+  </div>
+  <button id="filters-btn" class="fab" type="button" aria-expanded="false" aria-controls="filters-panel" aria-label="Categories">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+  </button>
+  <button id="dir-btn" class="fab" type="button" aria-expanded="false" aria-label="Directions">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.71 11.29-9-9a1 1 0 0 0-1.42 0l-9 9a1 1 0 0 0 0 1.42l9 9a1 1 0 0 0 1.42 0l9-9a1 1 0 0 0 0-1.42zM14 14.5V12h-4v3H8v-4a1 1 0 0 1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/></svg>
+  </button>
+  </div>
+  <div id="filters-panel" class="panel">
+    <div class="panel-head">
+      <h2>Categories</h2>
+      <div class="panel-actions">
+        <button id="cat-all" type="button">Show all</button>
+        <button id="cat-none" type="button">Clear all</button>
+      </div>
+    </div>
+    <div id="chips" role="group" aria-label="Filter by category"></div>
+  </div>
+  <div id="dir-panel" class="panel">
+    <h2>Directions</h2>
+    <div id="dir-mount"></div>
+    <p id="dir-empty" hidden>Route controls were not found. Check that routing.js loads.</p>
+  </div>
+  <div id="status" aria-live="polite"></div>
+</div>
+
+<div id="layers">
+  <div id="layers-panel" role="radiogroup" aria-label="Map type">
+    <h2>Map type</h2>
+    <div class="opts">
+      <button class="opt" type="button" role="radio" aria-checked="true" data-mode="2d">
+        <div class="thumb thumb-2d"></div><span>2D</span>
+      </button>
+      <button class="opt" type="button" role="radio" aria-checked="false" data-mode="3d">
+        <div class="thumb thumb-3d"></div><span>3D</span>
+      </button>
+    </div>
+    <div id="layers-details">
+      <h2>Map details</h2>
+      <div id="details-mount"></div>
+    </div>
+  </div>
+  <button id="layers-btn" type="button" aria-expanded="false" aria-controls="layers-panel" aria-label="Layers">
+    <div class="thumb thumb-2d" id="layers-thumb"></div>
+    <div class="label">Layers</div>
+  </button>
+</div>
+
+<div id="note">Unofficial student-made map. Verify details on campus.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+  // Edit these to change the map's starting view.
+  const START_CENTER = [-22.5658, 17.0755];
+  const START_ZOOM = 17;
+
+  const MAPTILER_KEY = "GcsYBfK3oL4GJSaiUmBo";
+
+  // One entry per category: label shown on the chip and marker colour.
+  const CATEGORIES = {
+    atm: { label: "ATM",     color: "#0f82a8" },
+    lecturersOffices: { label: "Lecturers Offices",     color: "#7a1fdb" },
+    hostel: { label: "Hostel",     color: "#e0a80b" },
+    auditorium: { label: "Auditorium",     color: "#2e7d32" },
+    gate:       { label: "Gates",          color: "#8a6d00" },
+    lecture:    { label: "Lecture venues", color: "#0f6b6e" },
+    library:    { label: "Library",        color: "#c2570c" },
+    admin:      { label: "Admin",          color: "#2f5fb3" },
+    food:       { label: "Food",           color: "#b3262e" },
+    parking:    { label: "Parking",        color: "#5d6b6c" },
+    Hotel:      { label: "Hotel",          color: "#e0b400" }
+  };
+
+  // Zoom control moves to the bottom-right, like Google Maps.
+  const map = L.map("map", { zoomControl: false }).setView(START_CENTER, START_ZOOM);
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+
+  map.setMinZoom(18);
+  map.setMaxBounds([
+    [-22.5700, 17.0720],   // south-west corner (lat, lng)
+    [-22.5630, 17.0800]    // north-east corner (lat, lng)
+  ]);
+
+  // ---------- Base layers (2D / 3D) ----------
+  const baseLayers = {
+    "2d": L.tileLayer(`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`, {
+      tileSize: 512,
+      zoomOffset: -1,
+      maxZoom: 22,
+      attribution: "&copy; MapTiler &copy; OpenStreetMap contributors"
+    })
+  };
+  let currentBase = "2d";     // "2d" | "3d"
+  baseLayers["2d"].addTo(map);
+
+  const mapEl = document.getElementById("map");
+  const map3dEl = document.getElementById("map3d");
+  let map3d = null;
+  let lastShown = [];         // features currently passing search + category filters
+
+  function setBase(mode) {
+    if (mode === currentBase) return;
+    if (mode === "3d") enter3D(); else exit3D();
+    currentBase = mode;
+    document.body.classList.toggle("is3d", mode === "3d");
+    document.querySelectorAll(".opt").forEach(o =>
+      o.setAttribute("aria-checked", o.dataset.mode === mode));
+    document.getElementById("layers-thumb").className = "thumb thumb-" + mode;
+    if (mode === "3d") schedule3DSync();
+  }
+
+  // ---------- 3D (MapLibre GL, vector tiles with extruded buildings) ----------
+  function enter3D() {
+    mapEl.classList.add("hidden");
+    map3dEl.style.display = "block";
+    const c = map.getCenter();
+    if (!map3d) {
+      init3D(c);
+    } else {
+      map3d.jumpTo({ center: [c.lng, c.lat], zoom: map.getZoom() - 1 });
+      map3d.resize();
+    }
+  }
+
+  function exit3D() {
+    if (map3d && map3dEl.style.display === "block") {
+      const c = map3d.getCenter();
+      map.setView([c.lat, c.lng], Math.max(18, Math.round(map3d.getZoom() + 1)), { animate: false });
+    }
+    map3dEl.style.display = "none";
+    mapEl.classList.remove("hidden");
+    map.invalidateSize();
+  }
+
+  function init3D(c) {
+    map3d = new maplibregl.Map({
+      container: "map3d",
+      style: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
+      center: [c.lng, c.lat],
+      zoom: map.getZoom() - 1,
+      pitch: 60,
+      bearing: -20,
+      minZoom: 15.5,
+      maxPitch: 80,
+      maxBounds: [[17.0700, -22.5720], [17.0820, -22.5610]]   // [west, south], [east, north]
+    });
+    map3d.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
+    render3DMarkers();
+
+    map3d.on("load", () => {
+      const style = map3d.getStyle();
+      const vecSource = Object.keys(style.sources).find(k => style.sources[k].type === "vector");
+      const firstLabel = style.layers.find(l => l.type === "symbol");
+
+      // Extruded buildings
+      if (vecSource) {
+        map3d.addLayer({
+          id: "buildings-3d",
+          type: "fill-extrusion",
+          source: vecSource,
+          "source-layer": "building",
+          minzoom: 15,
+          paint: {
+            "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 6],
+              0, "#d9d6cf", 40, "#bfc6ca", 100, "#9fa9af"],
+            "fill-extrusion-height": ["coalesce", ["get", "render_height"], 6],
+            "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+            "fill-extrusion-opacity": 0.92
+          }
+        }, firstLabel && firstLabel.id);
+      }
+
+      // Paths and route lines mirrored from the 2D map (routing.js draws them there)
+      const empty = { type: "FeatureCollection", features: [] };
+      map3d.addSource("net-lines", { type: "geojson", data: empty });
+      map3d.addSource("route-lines", { type: "geojson", data: empty });
+      const lineLayer = (id, src, dash, dashArray) => ({
+        id: id, type: "line", source: src,
+        filter: ["==", ["get", "dash"], dash],
+        layout: { "line-join": "round", "line-cap": dash ? "butt" : "round" },
+        paint: Object.assign({
+          "line-color": ["get", "color"], "line-width": ["get", "weight"], "line-opacity": ["get", "opacity"]
+        }, dash ? { "line-dasharray": dashArray } : {})
+      });
+      const before = firstLabel && firstLabel.id;
+      map3d.addLayer(lineLayer("net-solid", "net-lines", false), before);
+      map3d.addLayer(lineLayer("net-dash", "net-lines", true, [2, 2]), before);
+      map3d.addLayer(lineLayer("route-solid", "route-lines", false), before);
+      map3d.addLayer(lineLayer("route-dash", "route-lines", true, [1.5, 2]), before);
+      // Building outlines mirrored from outlines.js: raised blocks, start/destination stand taller
+      map3d.addSource("outlines", { type: "geojson", data: empty });
+      map3d.addSource("focus-labels", { type: "geojson", data: empty });
+      map3d.addLayer({
+        id: "outlines-all", type: "fill-extrusion", source: "outlines",
+        filter: ["==", ["get", "focus"], false],
+        paint: { "fill-extrusion-color": "#4f8a8c", "fill-extrusion-height": 12, "fill-extrusion-opacity": 0.5 }
+      }, before);
+      map3d.addLayer({
+        id: "outlines-focus", type: "fill-extrusion", source: "outlines",
+        filter: ["==", ["get", "focus"], true],
+        paint: { "fill-extrusion-color": ["get", "color"], "fill-extrusion-height": 30, "fill-extrusion-opacity": 0.85 }
+      }, before);
+      ["outlines-all", "outlines-focus"].forEach(id => {
+        map3d.on("click", id, e => {
+          if (map3d.queryRenderedFeatures(e.point, { layers: ["places-dots"] }).length) return;
+          const html = e.features[0].properties.popup;
+          if (html) new maplibregl.Popup({ maxWidth: "260px" }).setLngLat(e.lngLat).setHTML(html).addTo(map3d);
+        });
+      });
+      map3dReady = true;
+
+      // Campus places
+      const colorMatch = ["match", ["get", "category"]];
+      Object.entries(CATEGORIES).forEach(([k, v]) => colorMatch.push(k, v.color));
+      colorMatch.push("#333333");
+
+      map3d.addSource("places", { type: "geojson", data: { type: "FeatureCollection", features: lastShown } });
+      map3d.addLayer({
+        id: "places-dots", type: "circle", source: "places",
+        paint: {
+          "circle-radius": 8, "circle-color": colorMatch,
+          "circle-stroke-color": "#ffffff", "circle-stroke-width": 2,
+          "circle-pitch-alignment": "map"
+        }
+      });
+      map3d.addLayer({
+        id: "places-labels", type: "symbol", source: "places", minzoom: 17,
+        layout: {
+          "text-field": ["coalesce", ["get", "code"], ["get", "name"]],
+          "text-font": ["Noto Sans Regular"], "text-size": 11,
+          "text-offset": [0, 1.1], "text-anchor": "top", "text-optional": true
+        },
+        paint: { "text-color": "#202124", "text-halo-color": "#ffffff", "text-halo-width": 1.5 }
+      });
+
+      map3d.on("click", "places-dots", e => {
+        const f = e.features[0];
+        new maplibregl.Popup({ offset: 12, maxWidth: "260px" })
+          .setLngLat(f.geometry.coordinates)
+          .setHTML(popupHtml(f.properties))
+          .addTo(map3d);
+      });
+      map3d.addLayer({
+        id: "focus-labels", type: "symbol", source: "focus-labels",
+        layout: {
+          "text-field": ["get", "text"], "text-font": ["Noto Sans Regular"], "text-size": 13,
+          "text-pitch-alignment": "viewport", "text-allow-overlap": true
+        },
+        paint: { "text-color": "#202124", "text-halo-color": "#ffffff", "text-halo-width": 2 }
+      });
+      map3d.on("mouseenter", "places-dots", () => map3d.getCanvas().style.cursor = "pointer");
+      map3d.on("mouseleave", "places-dots", () => map3d.getCanvas().style.cursor = "");
+      map3d.on("click", () => { toggleLayers(false); toggleFilters(false); });
+      sync3D();
+    });
+  }
+
+  // Mirror the polylines Leaflet holds (network = non-interactive, route = interactive) into 3D.
+  let map3dReady = false, syncTimer = null, lastRouteSig = "";
+  function schedule3DSync() {
+    if (currentBase !== "3d" || !map3dReady) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(sync3D, 60);
+  }
+  function sync3D() {
+    if (!map3d || !map3dReady) return;
+    const net = [], route = [], polys = [], flabels = [];
+    Object.values(map._layers).forEach(l => {
+      if (l instanceof L.Polygon) {
+        let ring = l.getLatLngs()[0];
+        if (ring && Array.isArray(ring[0])) ring = ring[0];
+        if (!ring || ring.length < 3) return;
+        const coords = ring.map(p => [p.lng, p.lat]);
+        coords.push(coords[0]);
+        const tt = l.getTooltip && l.getTooltip();
+        const focus = !!(tt && tt.options.permanent);
+        const pop = l.getPopup && l.getPopup();
+        const popHtml = pop && typeof pop.getContent() === "string" ? pop.getContent() : "";
+        polys.push({ type: "Feature",
+          properties: { focus: focus, color: l.options.fillColor || l.options.color || "#888", popup: popHtml },
+          geometry: { type: "Polygon", coordinates: [coords] } });
+        if (focus) {
+          const c = l.getBounds().getCenter(), t = tt.getContent();
+          flabels.push({ type: "Feature", properties: { text: typeof t === "string" ? t : "" },
+            geometry: { type: "Point", coordinates: [c.lng, c.lat] } });
+        }
+        return;
+      }
+      if (!(l instanceof L.Polyline)) return;
+      let pts = l.getLatLngs();
+      if (pts.length && Array.isArray(pts[0])) pts = pts[0];
+      if (!pts || pts.length < 2) return;
+      const o = l.options;
+      const f = {
+        type: "Feature",
+        properties: { color: o.color || "#3388ff", weight: o.weight || 3, opacity: o.opacity == null ? 1 : o.opacity, dash: !!o.dashArray },
+        geometry: { type: "LineString", coordinates: pts.map(p => [p.lng, p.lat]) }
+      };
+      (o.interactive === false ? net : route).push(f);
+    });
+    map3d.getSource("net-lines").setData({ type: "FeatureCollection", features: net });
+    map3d.getSource("route-lines").setData({ type: "FeatureCollection", features: route });
+    map3d.getSource("outlines").setData({ type: "FeatureCollection", features: polys });
+    map3d.getSource("focus-labels").setData({ type: "FeatureCollection", features: flabels });
+
+    if (!route.length) { lastRouteSig = ""; return; }
+    const all = route.flatMap(f => f.geometry.coordinates);
+    const sig = route.length + ":" + all[0] + ":" + all[all.length - 1];
+    if (sig !== lastRouteSig) {
+      lastRouteSig = sig;
+      const b = new maplibregl.LngLatBounds();
+      all.forEach(c => b.extend(c));
+      map3d.fitBounds(b, { padding: { top: 120, bottom: 80, left: 40, right: 40 }, maxZoom: 18, duration: 600 });
+    }
+  }
+  map.on("layeradd layerremove", schedule3DSync);
+
+  // ---------- Start / destination icons (2D and 3D) ----------
+  // routing.js announces the chosen places through the "campus-route" event.
+  let routeDetail = null;
+  const leafletMarks = [], mlMarks = [];
+  const gmHtml = kind =>
+    `<div class="gm gm-${kind}"><div class="gm-body"><span class="gm-core"></span></div><div class="gm-stem"></div><div class="gm-ground"></div></div>`;
+  const gmEl = kind => { const d = document.createElement("div"); d.innerHTML = gmHtml(kind); return d.firstElementChild; };
+  // Where each icon stands: the centre of the building outline highlighted by outlines.js
+  // when there is one, otherwise the building's pin.
+  let markSig = "";
+  function endpoints() {
+    if (!routeDetail) return [];
+    const focusPolys = Object.values(map._layers).filter(l =>
+      l instanceof L.Polygon && l.getTooltip && l.getTooltip() && l.getTooltip().options.permanent);
+    const out = [];
+    [["end", "Destination:", routeDetail.to]].forEach(([kind, prefix, pl]) => {
+      if (!pl || !pl.c) return;
+      let pos = [pl.c[0], pl.c[1]];
+      const hit = focusPolys.find(l => String(l.getTooltip().getContent()).startsWith(prefix));
+      if (hit) { const c = hit.getBounds().getCenter(); pos = [c.lng, c.lat]; }
+      out.push([kind, { c: pos }]);
+    });
+    return out;
+  }
+  function refreshMarkers(force) {
+    const sig = JSON.stringify(endpoints());
+    if (!force && sig === markSig) return;
+    markSig = sig;
+    renderLeafletMarkers();
+    render3DMarkers();
+  }
+  let markTimer = null;
+  map.on("layeradd layerremove", () => { clearTimeout(markTimer); markTimer = setTimeout(() => refreshMarkers(false), 80); });
+
+  function renderLeafletMarkers() {
+    leafletMarks.splice(0).forEach(m => m.remove());
+    endpoints().forEach(([kind, pl]) => {
+      leafletMarks.push(L.marker([pl.c[1], pl.c[0]], {
+        icon: L.divIcon({ className: "", html: gmHtml(kind), iconSize: [40, 80], iconAnchor: [20, 80] }),
+        interactive: false, keyboard: false, zIndexOffset: 1000
+      }).addTo(map));
+    });
+  }
+  function render3DMarkers() {
+    mlMarks.splice(0).forEach(m => m.remove());
+    if (!map3d) return;
+    endpoints().forEach(([kind, pl]) => {
+      mlMarks.push(new maplibregl.Marker({ element: gmEl(kind), anchor: "bottom" }).setLngLat(pl.c).addTo(map3d));
+    });
+  }
+  document.addEventListener("campus-route", e => {
+    routeDetail = e.detail || null;
+    markSig = "";
+    setTimeout(() => refreshMarkers(true), 0);   // after outlines.js has drawn its highlight
+  });
+
+  function update3D(shownFeatures, searching) {
+    lastShown = shownFeatures;
+    if (!map3d || !map3d.getSource("places")) return;
+    map3d.getSource("places").setData({ type: "FeatureCollection", features: shownFeatures });
+    if (searching && shownFeatures.length && currentBase === "3d") {
+      const b = new maplibregl.LngLatBounds();
+      shownFeatures.forEach(f => b.extend(f.geometry.coordinates));
+      map3d.fitBounds(b, { padding: 120, maxZoom: 18, duration: 600 });
+    }
+  }
+
+  // ---------- Layers panel ----------
+  const layersBtn = document.getElementById("layers-btn");
+  const layersPanel = document.getElementById("layers-panel");
+  function toggleLayers(open) {
+    const on = open ?? !layersPanel.classList.contains("open");
+    layersPanel.classList.toggle("open", on);
+    layersBtn.setAttribute("aria-expanded", on);
+  }
+  layersBtn.addEventListener("click", () => toggleLayers());
+  document.querySelectorAll(".opt").forEach(o =>
+    o.addEventListener("click", () => { setBase(o.dataset.mode); toggleLayers(false); }));
+  map.on("click", () => toggleLayers(false));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") toggleLayers(false); });
+
+  // ---------- Markers, search, filters ----------
+  let features = [];
+  const markers = new Map();           // feature -> Leaflet marker
+  const active = new Set(Object.keys(CATEGORIES));
+  const layer = L.layerGroup().addTo(map);
+
+  const esc = s => String(s ?? "").replace(/[&<>"']/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function popupHtml(p) {
+    return `<div class="popup">
+      <h2>${esc(p.name)}</h2>
+      <p class="meta">${esc(p.code)} &middot; ${esc(p.department)}</p>
+      <p>${esc(p.contents)}</p>
+      <p class="meta">${p.accessible ? "Step-free access" : "Step-free access not confirmed"}${p.verified ? "" : " &middot; not yet verified"}</p>
+    </div>`;
+  }
+
+  function buildMarkers() {
+    features.forEach(f => {
+      const p = f.properties;
+      const [lng, lat] = f.geometry.coordinates;
+      const color = (CATEGORIES[p.category] || {}).color || "#333";
+      const m = L.circleMarker([lat, lng], {
+        radius: 9, color: "#fff", weight: 2, fillColor: color, fillOpacity: 1
+      }).bindPopup(popupHtml(p)).bindTooltip(p.code || p.name);
+      markers.set(f, m);
+    });
+  }
+
+  function refresh() {
+    const searchEl = document.getElementById("search");
+    const q = searchEl.value.trim().toLowerCase();
+    document.getElementById("clear").classList.toggle("on", q.length > 0);
+    layer.clearLayers();
+    const shown = [];
+    const shownFeatures = [];
+    features.forEach(f => {
+      const p = f.properties;
+      const hay = [p.name, p.code, p.department, p.contents].join(" ").toLowerCase();
+      if (active.has(p.category) && (!q || hay.includes(q))) {
+        layer.addLayer(markers.get(f));
+        shown.push(markers.get(f));
+        shownFeatures.push(f);
+      }
+    });
+    update3D(shownFeatures, q.length > 0);
+    const status = document.getElementById("status");
+    status.textContent = shown.length
+      ? `${shown.length} place${shown.length === 1 ? "" : "s"} shown`
+      : "No matches. Try a different search or turn a category back on.";
+    if (q && shown.length) {
+      map.fitBounds(L.featureGroup(shown).getBounds().pad(0.4), { maxZoom: 18 });
+      if (shown.length === 1) shown[0].openPopup();
+    }
+  }
+
+  const chipBtns = new Map();
+
+  function buildChips() {
+    const wrap = document.getElementById("chips");
+    Object.entries(CATEGORIES).forEach(([key, c]) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.type = "button";
+      b.setAttribute("aria-pressed", "true");
+      b.innerHTML = `<span class="dot" style="background:${c.color}"></span>${esc(c.label)}`;
+      b.addEventListener("click", () => {
+        if (active.has(key)) active.delete(key); else active.add(key);
+        b.setAttribute("aria-pressed", active.has(key));
+        refresh();
+      });
+      chipBtns.set(key, b);
+      wrap.appendChild(b);
+    });
+  }
+
+  document.getElementById("search").addEventListener("input", refresh);
+  document.getElementById("clear").addEventListener("click", () => {
+    const s = document.getElementById("search");
+    s.value = ""; s.focus(); refresh();
+  });
+  buildChips();
+
+  // Show all / Clear all categories
+  function setAllCategories(on) {
+    active.clear();
+    if (on) Object.keys(CATEGORIES).forEach(k => active.add(k));
+    chipBtns.forEach((b, k) => b.setAttribute("aria-pressed", active.has(k)));
+    refresh();
+  }
+  document.getElementById("cat-all").addEventListener("click", () => setAllCategories(true));
+  document.getElementById("cat-none").addEventListener("click", () => setAllCategories(false));
+
+  // ---------- Toggle panels: categories and directions ----------
+  const filtersBtn = document.getElementById("filters-btn");
+  const filtersPanel = document.getElementById("filters-panel");
+  const dirBtn = document.getElementById("dir-btn");
+  function toggleFilters(open) {
+    const on = open ?? !filtersPanel.classList.contains("open");
+    filtersPanel.classList.toggle("open", on);
+    filtersBtn.setAttribute("aria-expanded", on);
+    if (on) toggleDirections(false);
+  }
+  const dirPanel = document.getElementById("dir-panel");
+  function toggleDirections(open) {
+    const on = open ?? !dirPanel.classList.contains("open");
+    dirPanel.classList.toggle("open", on);
+    dirBtn.setAttribute("aria-expanded", on);
+    if (on) toggleFilters(false);
+  }
+  filtersBtn.addEventListener("click", () => toggleFilters());
+  dirBtn.addEventListener("click", () => toggleDirections());
+  map.on("click", () => { toggleFilters(false); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") { toggleFilters(false); toggleDirections(false); }
+  });
+
+  fetch("buildings.geojson")
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(data => { features = data.features; buildMarkers(); refresh(); })
+    .catch(() => {
+      document.getElementById("status").textContent =
+        "Could not load buildings.geojson. Serve this folder with a local web server instead of opening the file directly.";
+    });
+</script>
+<script src="layout.js"></script>
+<script src="routing.js"></script>
+<script src="outlines.js"></script>
+<script>
+  // routing.js builds #route-panel. Put it inside the Directions popup, and move its
+  // "Show path network" checkbox into Layers > Map details so it stays one tap away.
+  (function () {
+    const mount = document.getElementById("dir-mount");
+    const empty = document.getElementById("dir-empty");
+    const details = document.getElementById("details-mount");
+    // outlines.js puts "Show all NUST buildings" in a Leaflet corner control, which is
+    // hidden in 3D. Move it into Layers > Map details so it works in 2D and 3D.
+    const tog = document.getElementById("ol-toggle");
+    if (tog) {
+      const label = tog.closest("label"), note = document.getElementById("ol-note"), bar = tog.closest(".leaflet-control");
+      details.appendChild(label);
+      if (note) details.appendChild(note);
+      if (bar) bar.remove();
+    }
+    function attach() {
+      const panel = document.getElementById("route-panel");
+      if (!panel) return false;
+      const chk = panel.querySelector("label.chk");
+      if (chk) details.appendChild(chk);
+      mount.appendChild(panel);
+      empty.hidden = true;
+      return true;
+    }
+    if (!attach()) {
+      const obs = new MutationObserver(() => { if (attach()) obs.disconnect(); });
+      obs.observe(document.body, { childList: true, subtree: true });
+      window.addEventListener("load", () => { if (!attach()) empty.hidden = false; });
+    }
+  })();
+</script>
+<script>
+  // Searchable From / To pickers: type any part of a building name, code or department
+  // and the list narrows to the buildings that match. The original <select> stays in
+  // place (hidden) so routing.js keeps working unchanged.
+  (function () {
+    const norm = x => String(x == null ? "" : x).toLowerCase();
+    let extraMap = null, extraN = -1;
+    function extra(name) {
+      if (typeof features === "undefined" || !features.length) return { hay: "", sub: "" };
+      if (extraN !== features.length) {
+        extraMap = new Map();
+        features.forEach(f => {
+          const p = f.properties || {};
+          extraMap.set(norm(p.name), {
+            hay: norm([p.code, p.department, p.contents].join(" ")),
+            sub: [p.code, p.department].filter(Boolean).join(" \u00b7 ")
+          });
+        });
+        extraN = features.length;
+      }
+      return extraMap.get(norm(name)) || { hay: "", sub: "" };
+    }
+
+    function enhance(sel, label) {
+      const wrap = document.createElement("div");
+      wrap.className = "cb";
+      const input = document.createElement("input");
+      input.type = "text"; input.className = "cb-input";
+      input.placeholder = "Type a building name";
+      input.autocomplete = "off"; input.spellcheck = false;
+      input.setAttribute("role", "combobox");
+      input.setAttribute("aria-autocomplete", "list");
+      input.setAttribute("aria-expanded", "false");
+      input.setAttribute("aria-label", label);
+      const list = document.createElement("ul");
+      list.className = "cb-list"; list.setAttribute("role", "listbox"); list.hidden = true;
+      wrap.append(input, list);
+      sel.before(wrap);
+      sel.style.display = "none"; sel.tabIndex = -1; sel.setAttribute("aria-hidden", "true");
+
+      let items = [], hi = -1;
+      const selectedText = () => sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : "";
+
+      function position() {
+        const r = input.getBoundingClientRect();
+        list.style.left = r.left + "px";
+        list.style.top = (r.bottom + 4) + "px";
+        list.style.width = r.width + "px";
+        list.style.maxHeight = Math.max(120, Math.min(260, window.innerHeight - r.bottom - 16)) + "px";
+      }
+      function open() { list.hidden = false; input.setAttribute("aria-expanded", "true"); position(); }
+      function close() { list.hidden = true; input.setAttribute("aria-expanded", "false"); }
+
+      function matches(q) {
+        const tokens = norm(q).split(/\s+/).filter(Boolean);
+        const all = Array.from(sel.options);
+        if (!tokens.length) return all.map(o => ({ o: o, score: 0 }));
+        const out = [];
+        all.forEach(o => {
+          const name = norm(o.text), ex = extra(o.text);
+          const hay = name + " " + ex.hay;
+          if (!tokens.every(t => hay.includes(t))) return;
+          let score = 3;
+          if (name.startsWith(norm(q).trim())) score = 0;
+          else if (tokens.every(t => name.split(/[\s\-(),\/]+/).some(w => w.startsWith(t)))) score = 1;
+          else if (tokens.every(t => name.includes(t))) score = 2;
+          out.push({ o: o, score: score });
+        });
+        return out.sort((a, b) => a.score - b.score);   // stable: keeps A-Z order within a score
+      }
+
+      function highlight(el, text, q) {
+        const t = norm(q).split(/\s+/).filter(Boolean)[0];
+        const i = t ? norm(text).indexOf(t) : -1;
+        if (i < 0) { el.append(document.createTextNode(text)); return; }
+        el.append(document.createTextNode(text.slice(0, i)));
+        const m = document.createElement("mark"); m.textContent = text.slice(i, i + t.length);
+        el.append(m, document.createTextNode(text.slice(i + t.length)));
+      }
+
+      function render(q) {
+        list.innerHTML = "";
+        items = matches(q).slice(0, 60);
+        if (!items.length) {
+          const li = document.createElement("li");
+          li.className = "cb-empty"; li.textContent = "No buildings match";
+          list.appendChild(li); hi = -1; return;
+        }
+        items.forEach((it, idx) => {
+          const li = document.createElement("li");
+          li.setAttribute("role", "option");
+          li.setAttribute("aria-selected", String(it.o.value === sel.value));
+          const nm = document.createElement("span");
+          highlight(nm, it.o.text, q);
+          li.appendChild(nm);
+          const sub = extra(it.o.text).sub;
+          if (sub) { const s2 = document.createElement("span"); s2.className = "sub"; s2.textContent = sub; li.appendChild(s2); }
+          li.addEventListener("mousedown", e => { e.preventDefault(); choose(it.o); });
+          li.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); });
+          li.addEventListener("mousemove", () => setHi(idx, false));
+          list.appendChild(li);
+        });
+        const cur = q.trim() ? 0 : items.findIndex(it => it.o.value === sel.value);
+        setHi(cur < 0 ? 0 : cur, true);
+      }
+
+      function setHi(i, scroll) {
+        hi = i;
+        Array.from(list.children).forEach((li, idx) => li.classList.toggle("hi", idx === i));
+        if (scroll && list.children[i]) list.children[i].scrollIntoView({ block: "nearest" });
+      }
+
+      function choose(opt) {
+        sel.value = opt.value;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        input.value = opt.text;
+        close();
+        input.blur();
+      }
+
+      input.addEventListener("focus", () => { input.select(); render(""); open(); });
+      input.addEventListener("input", () => { render(input.value); open(); });
+      input.addEventListener("blur", () => { close(); input.value = selectedText(); });
+      input.addEventListener("keydown", e => {
+        if (e.key === "ArrowDown") { e.preventDefault(); if (list.hidden) { render(input.value); open(); } else if (items.length) setHi(Math.min(hi + 1, items.length - 1), true); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); if (items.length) setHi(Math.max(hi - 1, 0), true); }
+        else if (e.key === "Enter") { if (!list.hidden && items[hi]) { e.preventDefault(); choose(items[hi].o); } }
+        else if (e.key === "Escape") { if (!list.hidden) { e.stopPropagation(); close(); input.value = selectedText(); } }
+      });
+      window.addEventListener("resize", () => { if (!list.hidden) position(); });
+      window.addEventListener("scroll", () => { if (!list.hidden) position(); }, true);
+
+      // routing.js fills the <select> after buildings.geojson loads
+      new MutationObserver(() => { if (document.activeElement !== input) input.value = selectedText(); })
+        .observe(sel, { childList: true });
+      input.value = selectedText();
+    }
+
+    const from = document.getElementById("rt-from"), to = document.getElementById("rt-to");
+    if (from) enhance(from, "From");
+    if (to) enhance(to, "To");
+  })();
+</script>
+</body>
+</html>
